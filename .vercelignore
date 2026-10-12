@@ -1,0 +1,7 @@
+node_modules
+.angular
+.pnpm-store
+dist
+.git
+.env
+.env.*
