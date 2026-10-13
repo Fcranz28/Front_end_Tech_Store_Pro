@@ -1,3 +1,4 @@
+import { ReturnHistory } from '../../shared/return-history';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -5,7 +6,7 @@ import { money } from '../../core/store-api';
 import { ReturnPage, ReturnRequest, ReturnStatus, ReturnsApi, nextReturnStatuses, returnError, returnStatusLabel } from './returns-api';
 
 @Component({
-  selector: 'app-return-management', imports: [FormsModule, RouterLink], styleUrl: './returns.css',
+  selector: 'app-return-management', imports: [FormsModule, RouterLink, ReturnHistory], styleUrl: './returns.css',
   template: `
     <main class="container inner-page returns-page">
       <div class="page-heading"><div><span class="returns-eyebrow">Panel de operación</span><h1>Gestionar devoluciones</h1><p>Revisa las solicitudes y registra cada decisión.</p></div><a class="text-link" routerLink="/">Ir a la tienda →</a></div>
@@ -21,7 +22,7 @@ import { ReturnPage, ReturnRequest, ReturnStatus, ReturnsApi, nextReturnStatuses
             <div class="returns-total"><span>Importe calculado</span><strong>{{ money(item.importe) }}</strong></div>
             @if (item.comentario) { <p class="returns-note">Cliente: {{ item.comentario }}</p> }
             @if (item.observacionOperador) { <p class="returns-note">Operador: {{ item.observacionOperador }}</p> }
-            @if (next(item.estado).length) { <div class="returns-actions"><label>Observación <textarea rows="2" maxlength="1000" [ngModel]="notes[item.id] || ''" (ngModelChange)="notes[item.id] = $event" [name]="'note-' + item.id" placeholder="Obligatoria para rechazar"></textarea></label>
+            <app-return-history [events]="item.historial ?? []" />@if (next(item.estado).length) { <div class="returns-actions"><label>Observación <textarea rows="2" maxlength="1000" [ngModel]="notes[item.id] || ''" (ngModelChange)="notes[item.id] = $event" [name]="'note-' + item.id" placeholder="Obligatoria para rechazar"></textarea></label>
               <div>@for (status of next(item.estado); track status) { <button type="button" class="button" [class.button-primary]="status !== 'RECHAZADA'" [class.button-outline]="status === 'RECHAZADA'" [disabled]="busy() === item.id || (status === 'RECHAZADA' && !notes[item.id]?.trim())" (click)="update(item, status)">{{ statusLabel[status] }}</button> }</div></div> }
           </article>
         } @empty { <p class="returns-empty">No hay solicitudes con estos filtros.</p> }

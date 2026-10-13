@@ -11,6 +11,7 @@ export const routes: Routes = [
   { path: 'registro', loadComponent: () => import('./features/auth/register').then(m => m.Register) },
   { path: 'perfil', canActivate: [authGuard], loadComponent: () => import('./features/auth/profile').then(m => m.Profile) },
   { path: 'carrito', loadComponent: () => import('./features/carrito/cart').then(m => m.CartPage) },
+  { path: 'checkout', canActivate: [authGuard], loadComponent: () => import('./features/carrito/checkout').then(m => m.CheckoutPage) },
   { path: 'pedidos', canActivate: [authGuard], loadComponent: () => import('./features/pedidos/orders').then(m => m.OrdersPage) },
   { path: 'devoluciones', canActivate: [authGuard], loadComponent: () => import('./features/devoluciones/returns').then(m => m.ReturnsPage) },
   { path: 'devoluciones/nueva/:pedidoId', canActivate: [authGuard], loadComponent: () => import('./features/devoluciones/return-form').then(m => m.ReturnFormPage) },

@@ -1,3 +1,4 @@
+import { ReturnHistory } from '../../shared/return-history';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -5,7 +6,7 @@ import { money } from '../../core/store-api';
 import { Purchase, ReturnRequest, ReturnsApi, returnError, returnStatusLabel } from './returns-api';
 
 @Component({
-  selector: 'app-returns', imports: [RouterLink], styleUrl: './returns.css',
+  selector: 'app-returns', imports: [RouterLink, ReturnHistory], styleUrl: './returns.css',
   template: `
     <main class="container inner-page returns-page">
       <div class="page-heading"><div><span class="returns-eyebrow">Servicio posventa</span><h1>Mis devoluciones</h1><p>Consulta tus compras y el estado de cada solicitud.</p></div><a class="button button-outline" routerLink="/pedidos">Ver pedidos</a></div>
@@ -26,7 +27,7 @@ import { Purchase, ReturnRequest, ReturnsApi, returnError, returnStatusLabel } f
               <ul>@for (line of item.items; track line.pedidoDetalleId) { <li><span>{{ line.nombre }} × {{ line.cantidad }}</span><strong>{{ money(line.subtotal) }}</strong></li> }</ul>
               <div class="returns-total"><span>Importe solicitado</span><strong>{{ money(item.importe) }}</strong></div>
               @if (item.comentario) { <p class="returns-note">Tu comentario: {{ item.comentario }}</p> }
-              @if (item.observacionOperador) { <p class="returns-note">Observación: {{ item.observacionOperador }}</p> }
+              <app-return-history [events]="item.historial ?? []" />@if (item.observacionOperador) { <p class="returns-note">Observación: {{ item.observacionOperador }}</p> }
             </article>
           } @empty { <p class="returns-empty">Aún no has solicitado devoluciones.</p> }
         </section>

@@ -16,7 +16,7 @@ import { OrderStepper } from '../../shared/order-stepper';
       @else {
         <div class="orders-list">@for (order of orders(); track order.id) {
           <article class="order-card"><div class="order-card-head"><div><span class="product-category">Pedido #{{ order.id }}</span><h2>{{ date(order.createdAt) }}</h2></div><span class="status-pill">{{ statusLabel(order.estado) }}</span></div>
-            <app-order-stepper [status]="order.estado" />
+            <app-order-stepper [status]="order.estado" />@if (order.estadoPago === 'SIMULADO') { <p class="feedback">Pago simulado: no se realizó ningún cobro.</p> } @if (order.nombreDestinatario) { <p><strong>Entrega a {{ order.nombreDestinatario }}</strong><br>{{ order.direccionEntrega }}<br>Contacto: {{ order.telefonoEntrega }}</p> }
             <ul>@for (item of order.items; track item.productoId) { <li><span>{{ item.nombre }} <small>× {{ item.cantidad }}</small></span><strong>{{ money(item.subtotal) }}</strong></li> }</ul>
             <div class="order-card-total"><span>Total</span><strong>{{ money(order.total) }}</strong></div>
             @if (order.estado === 'ENTREGADO') { <a class="text-link" [routerLink]="['/devoluciones/nueva', order.id]">Solicitar devolución →</a> }

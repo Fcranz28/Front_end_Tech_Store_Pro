@@ -6,11 +6,12 @@ import { AuthService } from './core/auth.service';
 import { StoreApi } from './core/store-api';
 import { ProductVisual } from './shared/product-visual';
 import { money } from './core/store-api';
+import { RequestStatusBanner } from './shared/request-status-banner';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProductVisual],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProductVisual, RequestStatusBanner],
   template: `
     <div class="site-shell">
       @if (!adminPage()) {
@@ -52,7 +53,7 @@ import { money } from './core/store-api';
           } @else { <div class="cart-drawer-empty"><p>Tu carrito está vacío.</p><a routerLink="/productos" class="button button-primary" (click)="api.sidebarOpen.set(false)">Explorar productos</a></div> }
         </aside>
       }
-      <router-outlet />
+      <app-request-status />@if (auth.sessionExpired()) { <div class="container feedback" role="status">Tu sesión venció. El carrito de tu cuenta sigue guardado. <a routerLink="/login" [queryParams]="{next: '/carrito'}">Volver a ingresar</a></div> }<router-outlet />
       @if (!adminPage()) {
       <footer class="site-footer">
         <div class="container footer-main">
@@ -101,7 +102,7 @@ export class App implements OnInit {
   readonly sidebarError = signal('');
   ngOnInit() {
     if (this.auth.token()) {
-      this.auth.loadUser().subscribe({ next: user => { if (user.rol !== 'OPERADOR') this.api.restoreAfterLogin().subscribe({ error: () => {} }); }, error: () => this.auth.logout() });
+      this.auth.loadUser().subscribe({ next: user => { if (user.rol !== 'OPERADOR') this.api.restoreAfterLogin().subscribe({ error: () => {} }); }, error: () => { if (!this.auth.token()) this.api.loadCart().subscribe({error: () => {}}); } });
     } else this.api.loadCart().subscribe();
   }
   @HostListener('document:keydown.escape') closeSidebar() { this.api.sidebarOpen.set(false); }

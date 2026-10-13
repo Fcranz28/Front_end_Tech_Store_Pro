@@ -1,8 +1,10 @@
+import { readGuestToken, saveGuestToken, clearGuestToken } from './guest-cart-storage';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { catchError, of, switchMap, tap, throwError } from 'rxjs';
 
-export const API_URL = 'http://localhost:8080';
+import { API_URL } from './api.config';
+export { API_URL } from './api.config';
 export const money = (value: number) => new Intl.NumberFormat('es-PE', {
   style: 'currency', currency: 'PEN', maximumFractionDigits: 2
 }).format(value);
@@ -39,7 +41,7 @@ export interface CartItem {
 
 export interface Cart { items: CartItem[]; total: number }
 interface GuestCartResponse { token: string; carrito: Cart }
-const GUEST_CART_KEY = 'techstore_guest_cart_jwt';
+
 
 export interface OrderLine {
   productoId: number;
@@ -54,6 +56,7 @@ export interface Order {
   estado: OrderStatus;
   total: number;
   createdAt: string;
+  nombreDestinatario?: string; telefonoEntrega?: string; direccionEntrega?: string; estadoPago?: 'NO_PROCESADO' | 'SIMULADO';
   items: OrderLine[];
 }
 
@@ -84,6 +87,7 @@ export class StoreApi {
   readonly cart = signal<Cart>({ items: [], total: 0 });
   readonly sidebarOpen = signal(false);
   readonly transferError = signal('');
+  readonly cartNotice = signal('');
 
   products() { return this.http.get<Product[]>(`${API_URL}/productos`); }
   catalog(params: Record<string, string>) { return this.http.get<CatalogResponse>(`${API_URL}/productos/catalogo`, { params }); }
@@ -98,9 +102,9 @@ export class StoreApi {
     return this.http.post<{ imagenUrl: string }>(`${API_URL}/productos/imagenes`, body, { observe: 'events', reportProgress: true });
   }
 
-  private guestToken() { return sessionStorage.getItem(GUEST_CART_KEY); }
+  private guestToken() { return readGuestToken(); }
   private saveGuest(response: GuestCartResponse) {
-    sessionStorage.setItem(GUEST_CART_KEY, response.token);
+    saveGuestToken(response.token);
     this.cart.set(response.carrito);
   }
   private authenticated() { return !!sessionStorage.getItem('techstore_token'); }
@@ -116,7 +120,8 @@ export class StoreApi {
     return this.http.post<GuestCartResponse>(`${API_URL}/carrito/invitado/actual`, { token: this.guestToken() }).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status !== 401) return throwError(() => error);
-        sessionStorage.removeItem(GUEST_CART_KEY);
+        this.cartNotice.set('Tu carrito de invitado venció. Puedes volver a elegir tus productos.');
+        clearGuestToken();
         return this.http.post<GuestCartResponse>(`${API_URL}/carrito/invitado/actual`, { token: null });
       }))
       .pipe(tap(response => this.saveGuest(response)), switchMap(response => of(response.carrito)));
@@ -149,19 +154,26 @@ export class StoreApi {
     const token = this.guestToken();
     if (!token) return this.loadCart();
     return this.http.post<Cart>(`${API_URL}/carrito/invitado/transferir`, { token }).pipe(tap(cart => {
-      sessionStorage.removeItem(GUEST_CART_KEY);
+      clearGuestToken();
       this.transferError.set('');
       this.cart.set(cart);
     }), catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        sessionStorage.removeItem(GUEST_CART_KEY);
-        this.transferError.set('');
-        return this.loadCart();
+        if (!this.authenticated()) return this.loadCart();
+        return this.http.get(`${API_URL}/auth/me`).pipe(switchMap(() => {
+          this.cartNotice.set('Tu carrito de invitado venció. Conservamos el carrito de tu cuenta.');
+          clearGuestToken(); this.transferError.set('');
+          return this.loadCart();
+        }), catchError(sessionError => {
+          if (sessionError.status === 401 && !this.authenticated()) return this.loadCart();
+          return throwError(() => sessionError);
+        }));
       }
       this.transferError.set('No pudimos recuperar tu carrito. Inténtalo desde el carrito.');
       return throwError(() => error);
     }));
   }
+  checkout(input: { nombreDestinatario: string; telefonoEntrega: string; direccionEntrega: string }) { return this.http.post<Order>(`${API_URL}/pedidos/checkout`, input).pipe(tap(() => this.cart.set({ items: [], total: 0 }))); }
   confirmOrder() { return this.http.post<Order>(`${API_URL}/pedidos`, {}).pipe(tap(() => this.cart.set({ items: [], total: 0 }))); }
   myOrders() { return this.http.get<Order[]>(`${API_URL}/pedidos`); }
   allOrders() { return this.http.get<Order[]>(`${API_URL}/pedidos/admin`); }

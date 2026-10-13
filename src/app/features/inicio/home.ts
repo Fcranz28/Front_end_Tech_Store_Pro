@@ -1,3 +1,4 @@
+import { requestError } from '../../core/request-status';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Product, StoreApi, money } from '../../core/store-api';
@@ -108,8 +109,8 @@ export class Home implements OnInit {
         this.activeIndex.set(Math.min(2, Math.floor((products.length - 1) / 2)));
         this.loading.set(false);
       },
-      error: () => {
-        this.error.set('No pudimos cargar la selección. Comprueba la conexión e inténtalo de nuevo.');
+      error: error => {
+        this.error.set(requestError(error, 'No pudimos cargar la selección. Vuelve a intentarlo.'));
         this.loading.set(false);
       }
     });

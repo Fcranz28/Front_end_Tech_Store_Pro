@@ -1,3 +1,4 @@
+import { requestError } from '../../core/request-status';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -82,7 +83,7 @@ export class Catalog implements OnInit {
   }
   private request() {
     return this.api.catalog(this.params).pipe(tap(response => { this.catalog.set(response); this.loading.set(false); }), catchError((error: HttpErrorResponse) => {
-      this.error.set(error.status === 400 ? 'Revisa los filtros: usa precios positivos y un mínimo menor o igual al máximo.' : 'Comprueba la conexión con el servidor e inténtalo de nuevo.');
+      this.error.set(error.status === 400 ? 'Revisa los filtros: usa precios positivos y un mínimo menor o igual al máximo.' : requestError(error, 'No pudimos cargar los productos. Vuelve a intentarlo.'));
       this.loading.set(false); return of(null);
     }));
   }

@@ -1,3 +1,4 @@
+import { requestError } from '../../core/request-status';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -11,7 +12,7 @@ import { AuthService } from '../../core/auth.service';
   template: `
     <section class="container inner-page">
       <div class="page-heading"><div><h1>Tu carrito</h1><p>Todo lo que elegiste, listo para el siguiente paso.</p></div><a routerLink="/productos" class="text-link">Seguir comprando →</a></div>
-      @if (api.transferError()) { <p role="alert" class="cart-transfer-alert">{{ api.transferError() }} <button type="button" (click)="retryTransfer()">Reintentar</button></p> }
+      @if (api.cartNotice()) { <p role="status" class="feedback">{{ api.cartNotice() }}</p> } @if (api.transferError()) { <p role="alert" class="cart-transfer-alert">{{ api.transferError() }} <button type="button" (click)="retryTransfer()">Reintentar</button></p> }
       @if (loading()) { <p class="feedback">Cargando carrito…</p> }
       @else if (error()) { <div class="feedback feedback-error" role="alert">{{ error() }} <button (click)="load()">Reintentar</button></div> }
       @else if (!api.cart().items.length) {
@@ -31,9 +32,9 @@ import { AuthService } from '../../core/auth.service';
           </div>
           <aside class="order-summary"><h2>Resumen</h2><div class="summary-row"><span>{{ api.cart().items.length }} {{ api.cart().items.length === 1 ? 'artículo' : 'artículos' }}</span><strong>{{ money(api.cart().total) }}</strong></div>
             <div class="summary-total"><span>Total</span><strong>{{ money(api.cart().total) }}</strong></div>
-            <p>El pedido se confirma con el stock y precio actuales. No incluye procesamiento de pago.</p>
+            <p>Revisarás los datos de entrega antes de confirmar. El pago de esta demostración es simulado.</p>
             @if (actionError()) { <p role="alert" class="form-error">{{ actionError() }}</p> }
-            <button class="button button-primary full-width" [disabled]="busy() || !!api.transferError()" (click)="confirm()">{{ busy() ? 'Procesando…' : auth.token() ? 'Confirmar pedido' : 'Continuar para confirmar' }}</button>
+            <button class="button button-primary full-width" [disabled]="busy() || !!api.transferError()" (click)="confirm()">{{ busy() ? 'Procesando…' : 'Continuar al checkout' }}</button>
           </aside>
         </div>
       }
@@ -54,7 +55,7 @@ export class CartPage implements OnInit {
     this.loading.set(true); this.error.set('');
     this.api.restoreAfterLogin().subscribe({
       next: () => this.loading.set(false),
-      error: () => { if (!this.api.transferError()) this.error.set('No pudimos cargar tu carrito.'); this.loading.set(false); }
+      error: error => { if (!this.api.transferError()) this.error.set(requestError(error, 'No pudimos cargar tu carrito. Vuelve a intentarlo.')); this.loading.set(false); }
     });
   }
   asProduct(item: { productoId: number; nombre: string; categoria: string; imagenUrl: string | null; precio: number; stock: number }) {
@@ -81,15 +82,7 @@ export class CartPage implements OnInit {
       error: () => { this.actionError.set('No se pudo eliminar el artículo.'); this.busy.set(false); }
     });
   }
-  confirm() {
-    if (this.api.transferError()) return;
-    if (!this.auth.token()) { void this.router.navigate(['/login'], { queryParams: { next: '/carrito' } }); return; }
-    this.busy.set(true); this.actionError.set('');
-    this.api.confirmOrder().subscribe({
-      next: order => void this.router.navigate(['/pedidos'], { queryParams: { confirmado: order.id } }),
-      error: (e: HttpErrorResponse) => { this.actionError.set(e.status === 409 ? 'El stock de algún producto cambió. Revisa tu carrito.' : 'No se pudo confirmar el pedido.'); this.busy.set(false); this.load(); }
-    });
-  }
+  confirm() { if (!this.api.transferError()) void this.router.navigate(['/checkout']); }
   retryTransfer() {
     this.busy.set(true);
     this.api.restoreAfterLogin().subscribe({ next: () => this.busy.set(false),

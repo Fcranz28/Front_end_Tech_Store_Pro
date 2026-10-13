@@ -6,10 +6,11 @@ export type ReturnStatus = 'SOLICITADA' | 'EN_REVISION' | 'APROBADA' | 'RECHAZAD
 export interface PurchaseLine { pedidoDetalleId: number; productoId: number; nombre: string; precioUnitario: number; comprado: number; disponible: number }
 export interface Purchase { id: number; estado: string; createdAt: string; items: PurchaseLine[] }
 export interface ReturnLine { pedidoDetalleId: number; nombre: string; cantidad: number; precioUnitario: number; subtotal: number }
+export interface ReturnHistoryEvent { id: number; estadoAnterior: ReturnStatus | null; estadoNuevo: ReturnStatus; actorId: number | null; actorNombre: string; actorRol: string; observacion: string | null; createdAt: string }
 export interface ReturnRequest {
   id: number; pedidoId: number; usuarioId: number; estado: ReturnStatus; motivo: string;
   comentario: string | null; observacionOperador: string | null; importe: number;
-  createdAt: string; updatedAt: string; items: ReturnLine[];
+  createdAt: string; updatedAt: string; items: ReturnLine[]; historial?: ReturnHistoryEvent[];
 }
 export interface ReturnPage { content: ReturnRequest[]; totalElements: number; totalPages: number; number: number }
 export const returnStatusLabel: Record<ReturnStatus, string> = {

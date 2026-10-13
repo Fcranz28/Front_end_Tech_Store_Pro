@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { StoreApi } from './store-api';
+import { API_URL } from './api.config';
 
 export interface User {
   id: number;
@@ -21,9 +22,10 @@ interface AuthResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly cartApi = inject(StoreApi);
-  private readonly api = 'http://localhost:8080/auth';
+  private readonly api = `${API_URL}/auth`;
   readonly user = signal<User | null>(null);
   readonly token = signal<string | null>(sessionStorage.getItem('techstore_token'));
+  readonly sessionExpired = signal(false);
 
   register(nombre: string, email: string, password: string) {
     return this.http.post<AuthResponse>(`${this.api}/register`, { nombre, email, password })
@@ -43,6 +45,12 @@ export class AuthService {
     return this.http.get<User>(`${this.api}/me`).pipe(tap(user => this.user.set(user)));
   }
 
+  expireSession() {
+    sessionStorage.removeItem('techstore_token');
+    this.token.set(null); this.user.set(null); this.sessionExpired.set(true);
+    this.cartApi.cart.set({ items: [], total: 0 });
+  }
+
   logout() {
     sessionStorage.removeItem('techstore_token');
     this.token.set(null);
@@ -53,7 +61,7 @@ export class AuthService {
     this.cartApi.loadCart().subscribe({ error: () => {} });
   }
 
-  private save(response: AuthResponse) {
+  private save(response: AuthResponse) { this.sessionExpired.set(false);
     sessionStorage.setItem('techstore_token', response.token);
     this.token.set(response.token);
     this.user.set(response.user);
